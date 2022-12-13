@@ -29,12 +29,6 @@ COLOUR = {
 
 
 class Node:
-    """
-    The Node Class uses a linked node structure to store information
-    about the current node location and the location of its
-    parent's location
-    """
-
     def __init__(self, position, parent):
         '''
         Function Name: __init__
@@ -43,12 +37,6 @@ class Node:
         Parameters:
             position -- tuple, current coordinates
             parent -- Node, parent of current node
-        
-        Raises:
-            Nothing
-        
-        Returns:
-            Nothing
         '''
         self.position = position
         self.parent = parent
@@ -149,8 +137,10 @@ class Application:
             Starts the breadth-first search algorithm to traverse a maze
         
         Parameters:
+            Nothing
         
         Raises:
+            Nothing
         
         Returns:
             list of tuples, list of positions to traverse from start to end
