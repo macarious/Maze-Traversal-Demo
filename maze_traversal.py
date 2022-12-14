@@ -6,8 +6,8 @@ Maze Traversal using BFS and DFS
 
 GILL, JagJeevin
 HUI, Macarious Kin Fung
-Pan, Yuchen
-Wang, Judy
+PAN, Yuchen
+WANG, Judy
 '''
 
 from queue import PriorityQueue
@@ -16,7 +16,7 @@ from tkinter import ttk
 
 
 CELL_SIZE = 30 # for animation
-ANIMATION_INTERVAL = 20 # milliseconds
+ANIMATION_INTERVAL = 40 # milliseconds
 FONT = {
     'heading' : ('Arial', 16, 'underline'),
     'info box' : ('Arial', 11),
@@ -133,9 +133,9 @@ class Application:
         height = len(self.maze) * CELL_SIZE
 
         # Create labels for displaying headers
-        self.label_bfs = ttk.Label(self.master, anchor = 'center', text = 'Breadth-First Search', font = FONT['heading'])
+        self.label_bfs = ttk.Label(self.master, anchor = 'center', text = 'Breadth First Search', font = FONT['heading'])
         self.label_bfs.grid(column = 0, row = 0, sticky = 'nsew', padx = 20, pady = 5)
-        self.label_dfs = ttk.Label(self.master, anchor = 'center', text = 'Depth-First Search', font = FONT['heading'])
+        self.label_dfs = ttk.Label(self.master, anchor = 'center', text = 'Depth First Search', font = FONT['heading'])
         self.label_dfs.grid(column = 1, row = 0, sticky = 'nsew', padx = 20, pady = 5)
         self.label_astar = ttk.Label(self.master, anchor = 'center', text = 'A* Search', font = FONT['heading'])
         self.label_astar.grid(column = 2, row = 0, sticky = 'nsew', padx = 20, pady = 5)
@@ -366,10 +366,13 @@ class Application:
                     (self.maze[new_row][new_column] != 1) and ((new_row, new_column) not in visited)
                     and all((new_row, new_column) != node.position for node in pqueue.queue)
                 ):
-
+                    
+                    # Distance from new cell to end cell:
                     # Calculate heuristic using Manthttan distance
-                    # abs(x - x_end) + abs(y - y_end)
-                    cost = abs(new_row - self.end[0]) + abs(new_column - self.end[1])
+                    #   h = abs(x - x_end) + abs(y - y_end)
+                    h = abs(new_row - self.end[0]) + abs(new_column - self.end[1])
+                    g = 1 # Distance from current cell to new cell
+                    cost = g + h # Total cost:
 
                     # Set current node as parent and add current node to priority queue
                     new_node = Node((new_row, new_column), current_node, cost)
