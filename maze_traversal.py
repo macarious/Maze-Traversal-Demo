@@ -35,7 +35,7 @@ COLOUR = {
 
 
 class Node:
-    def __init__(self, position, parent, cost = 0):
+    def __init__(self, position, parent, g = 0, h = 0):
         '''
         Function Name: __init__
             Constructor for Node class
@@ -43,14 +43,16 @@ class Node:
         Parameters:
             position -- tuple, current coordinates
             parent -- Node, parent of current node
-            cost -- float, heuristic for A*
+            g -- numeral, distance from start to new node, used in A*
+            h -- numeral, heuristc, used in A*
 
         Returns:
             None
         '''
         self.position = position
         self.parent = parent
-        self.cost = cost
+        self.g = g
+        self.h = h
 
 
     def __eq__(self, other):
@@ -62,7 +64,7 @@ class Node:
             bool, True if cost of left Node is equal the cost of right Node;
                 False otherwise
         '''
-        return self.cost == other.cost
+        return (self.g + self.h) == (other.g + other.h)
 
 
     def __lt__(self, other):
@@ -74,7 +76,7 @@ class Node:
             bool, True if cost of left Node is less than the cost of right Node;
                 False otherwise
         '''
-        return self.cost < other.cost
+        return (self.g + self.h) < (other.g + other.h)
 
 
 class Application:
@@ -224,8 +226,8 @@ class Application:
                 self.update_text()
                 return path
 
-            # From current cell, traverse to all possible nodes (W, S, E, N)
-            for row_change, column_change in [(0, -1), (1, 0), (0, 1), (-1, 0)]:
+            # From current cell, traverse to all possible nodes (N, E, S, W)
+            for row_change, column_change in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
                 new_row = current_node.position[0] + row_change
                 new_column = current_node.position[1] + column_change
 
@@ -325,10 +327,9 @@ class Application:
         self.astar_counter = 0 # Reset counter
         self.astar_path = [] # Reset path
         self.draw_maze(self.canvas_astar)
-        start_node = Node(self.start, None, cost = 0)
-        cost = 0 # Initial cost for priority queue
+        start_node = Node(self.start, None)
         pqueue = PriorityQueue() # Instantiate a priority queue
-        pqueue.put(start_node) # Store a tuple of cost and 'Node' (sort by cost when dequeue)
+        pqueue.put(start_node)
         visited = set() # Create a set of visited nodes
 
         while not pqueue.empty(): # Keep searching until priority queue is empty
@@ -353,8 +354,8 @@ class Application:
                 self.update_text()
                 return path
 
-            # From current cell, find all possible nodes (W, S, E, N)  
-            for row_change, column_change in [(0, -1), (1, 0), (0, 1), (-1, 0)]:
+            # From current cell, find all possible nodes (N, E, S, W)  
+            for row_change, column_change in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
                 new_row = current_node.position[0] + row_change
                 new_column = current_node.position[1] + column_change
 
@@ -371,11 +372,10 @@ class Application:
                     # Calculate heuristic using Manthttan distance
                     #   h = abs(x - x_end) + abs(y - y_end)
                     h = abs(new_row - self.end[0]) + abs(new_column - self.end[1])
-                    g = 1 # Distance from current cell to new cell
-                    cost = g + h # Total cost:
+                    g = current_node.g + 1 # Update distance from current cell to new cell
 
                     # Set current node as parent and add current node to priority queue
-                    new_node = Node((new_row, new_column), current_node, cost)
+                    new_node = Node((new_row, new_column), current_node, g, h)
                     pqueue.put(new_node)
 
         self.astar_path = 'A Star: no solution found'
