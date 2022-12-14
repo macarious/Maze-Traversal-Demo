@@ -10,26 +10,32 @@ Pan, Yuchen
 Wang, Judy
 '''
 
+from queue import PriorityQueue
 import tkinter as tk
 from tkinter import ttk
 
 
 CELL_SIZE = 30 # for animation
-HEADING_FONT = ('Arial', 16, 'underline')
-INFO_FONT = ('Arial', 11)
-ANIMATION_INTERVAL = 100 # milliseconds
+ANIMATION_INTERVAL = 20 # milliseconds
+FONT = {
+    'heading' : ('Arial', 16, 'underline'),
+    'info box' : ('Arial', 11),
+    'cell' : ('Arial', 8, 'bold'),
+}
 COLOUR = {
     'wall' : 'black',
     'empty' : 'white',
-    'start' : 'blue1',
+    'start' : 'green1',
     'end' : 'red1',
-    'path_bfs' : 'green1',
+    'path_bfs' : 'yellow1',
     'path_dfs' : 'purple1',
-    }  
+    'path_astar' : 'orange1',
+    'font' : 'black',
+}  
 
 
 class Node:
-    def __init__(self, position, parent):
+    def __init__(self, position, parent, cost = 0):
         '''
         Function Name: __init__
             Constructor for Node class
@@ -37,9 +43,38 @@ class Node:
         Parameters:
             position -- tuple, current coordinates
             parent -- Node, parent of current node
+            cost -- float, heuristic for A*
+
+        Returns:
+            None
         '''
         self.position = position
         self.parent = parent
+        self.cost = cost
+
+
+    def __eq__(self, other):
+        '''
+        Function Name: __init__
+            Compares two Node objects
+
+        Returns:
+            bool, True if cost of left Node is equal the cost of right Node;
+                False otherwise
+        '''
+        return self.cost == other.cost
+
+
+    def __lt__(self, other):
+        '''
+        Function Name: __init__
+            Compares two Node objects
+
+        Returns:
+            bool, True if cost of left Node is less than the cost of right Node;
+                False otherwise
+        '''
+        return self.cost < other.cost
 
 
 class Application:
@@ -70,8 +105,10 @@ class Application:
         self.end = end
         self.bfs_counter = 0
         self.dfs_counter = 0
+        self.astar_counter = 0
         self.bfs_path = []
         self.dfs_path = []
+        self.astar_path = []
 
 
     def build_window(self):
@@ -96,37 +133,50 @@ class Application:
         height = len(self.maze) * CELL_SIZE
 
         # Create labels for displaying headers
-        self.label_bfs = ttk.Label(self.master, anchor = 'center', text = 'Breadth-First Search', font = HEADING_FONT)
+        self.label_bfs = ttk.Label(self.master, anchor = 'center', text = 'Breadth-First Search', font = FONT['heading'])
         self.label_bfs.grid(column = 0, row = 0, sticky = 'nsew', padx = 20, pady = 5)
-        self.label_dfs = ttk.Label(self.master, anchor = 'center', text = 'Depth-First Search', font = HEADING_FONT)
+        self.label_dfs = ttk.Label(self.master, anchor = 'center', text = 'Depth-First Search', font = FONT['heading'])
         self.label_dfs.grid(column = 1, row = 0, sticky = 'nsew', padx = 20, pady = 5)
+        self.label_astar = ttk.Label(self.master, anchor = 'center', text = 'A* Search', font = FONT['heading'])
+        self.label_astar.grid(column = 2, row = 0, sticky = 'nsew', padx = 20, pady = 5)
 
         # Create two canvas widgets to draw maze
         self.canvas_bfs = tk.Canvas(self.master, width = width, height = height)
         self.canvas_bfs.grid(column = 0, row = 1, sticky = 'nsew', padx = 20, pady = 5)
         self.canvas_dfs = tk.Canvas(self.master, width = width, height = height)
         self.canvas_dfs.grid(column = 1, row = 1, sticky = 'nsew', padx = 20, pady = 5)
+        self.canvas_astar = tk.Canvas(self.master, width = width, height = height)
+        self.canvas_astar.grid(column = 2, row = 1, sticky = 'nsew', padx = 20, pady = 5)
 
         # Draw maze in both canvases:
         self.draw_maze(self.canvas_bfs)
         self.draw_maze(self.canvas_dfs)
+        self.draw_maze(self.canvas_astar)
 
         # Create buttons
         self.button_bfs = ttk.Button(self.master, text = 'Start BFS', command = self.start_bfs)
         self.button_bfs.grid(column = 0, row = 2, sticky = 'nsew', padx = 70, pady = 0)
         self.button_dfs = ttk.Button(self.master, text = 'Start DFS', command = self.start_dfs)
         self.button_dfs.grid(column = 1, row = 2, sticky = 'nsew', padx = 70, pady = 0)
+        self.button_astar = ttk.Button(self.master, text = 'Start A*', command = self.start_astar)
+        self.button_astar.grid(column = 2, row = 2, sticky = 'nsew', padx = 70, pady = 0)
 
         # Create labels for displaing results
         self.frame_bfs_results = ttk.LabelFrame(self.master, text = 'BFS Results', labelanchor = 'nw', relief = 'solid')
         self.frame_bfs_results.grid(column = 0, row = 3, sticky = 'nsew', padx = 20, pady = 5)
-        self.label_bfs_results = ttk.Label(self.frame_bfs_results, anchor = 'nw', text = '', font = INFO_FONT, wraplength = len(self.maze[0]) * CELL_SIZE - 50)
+        self.label_bfs_results = ttk.Label(self.frame_bfs_results, anchor = 'nw', text = '', font = FONT['info box'], wraplength = len(self.maze[0]) * CELL_SIZE - 50)
         self.label_bfs_results.pack(expand = True, fill = 'both', padx = 20, pady = 5)
 
         self.frame_dfs_results = ttk.LabelFrame(self.master, text = 'DFS Results', labelanchor = 'nw', relief = 'solid')
         self.frame_dfs_results.grid(column = 1, row = 3, sticky = 'nsew', padx = 20, pady = 5)
-        self.label_dfs_results = ttk.Label(self.frame_dfs_results, anchor = 'nw', text = '', font = INFO_FONT, wraplength = len(self.maze[0]) * CELL_SIZE - 50)
+        self.label_dfs_results = ttk.Label(self.frame_dfs_results, anchor = 'nw', text = '', font = FONT['info box'], wraplength = len(self.maze[0]) * CELL_SIZE - 50)
         self.label_dfs_results.pack(expand = True, fill = 'both', padx = 20, pady = 5)
+
+        self.frame_astar_results = ttk.LabelFrame(self.master, text = 'A* Results', labelanchor = 'nw', relief = 'solid')
+        self.frame_astar_results.grid(column = 2, row = 3, sticky = 'nsew', padx = 20, pady = 5)
+        self.label_astar_results = ttk.Label(self.frame_astar_results, anchor = 'nw', text = '', font = FONT['info box'], wraplength = len(self.maze[0]) * CELL_SIZE - 50)
+        self.label_astar_results.pack(expand = True, fill = 'both', padx = 20, pady = 5)
+
 
         self.update_text()
 
@@ -145,8 +195,8 @@ class Application:
         Returns:
             list of tuples, list of positions to traverse from start to end
         '''
-        self.bfs_counter = 0
-        self.bfs_path = []
+        self.bfs_counter = 0 # Reset counter
+        self.bfs_path = [] # Reset path
         self.draw_maze(self.canvas_bfs)
         start_node = Node(self.start, None)
         queue = [start_node] # Use queue as data structure
@@ -155,42 +205,43 @@ class Application:
         while len(queue) > 0: # Keep searching until queue is empty
 
             current_node = queue.pop(0)
-            if current_node.position not in visited:
 
-                # Update info in application window
-                self.bfs_counter += 1
-                self.draw_path_circle(current_node, self.canvas_bfs, COLOUR['path_bfs'])
-                self.wait(ANIMATION_INTERVAL)
+            # Update info in application window
+            self.bfs_counter += 1
+            self.draw_path_circle(current_node, self.canvas_bfs, COLOUR['path_bfs'], self.bfs_counter)
+            self.update_text()
+
+            visited.add(current_node.position)
+
+            if current_node.position == self.end:
+                path = [] # Find path by seeking through all parents node
+                while current_node is not None:
+                    path.append(current_node.position)
+                    current_node = current_node.parent
+
+                self.bfs_path = path[::-1] # Reverse the list of nodes
+                self.draw_path_all(self.bfs_path, self.canvas_bfs, COLOUR['path_bfs'])
                 self.update_text()
-                # self.refresh_path_circle_bfs(current_node)
+                return path
 
-                visited.add(current_node.position)
+            # From current cell, traverse to all possible nodes (W, S, E, N)
+            for row_change, column_change in [(0, -1), (1, 0), (0, 1), (-1, 0)]:
+                new_row = current_node.position[0] + row_change
+                new_column = current_node.position[1] + column_change
 
-                if current_node.position == self.end:
-                    path = [] # Find path by seeking through all parents node
-                    while current_node is not None:
-                        path.append(current_node.position)
-                        current_node = current_node.parent
+                # Check if adjacent cell is a valid path
+                # Valid path must be in range of maze boundaries
+                # Valid path must not be a wall
+                # Valid path cannot already be in queue
+                if (
+                    (0 <= new_row < len(self.maze)) and (0 <= new_column < len(self.maze[0])) and
+                    (self.maze[new_row][new_column] != 1) and ((new_row, new_column) not in visited)
+                    ) and all((new_row, new_column) != position for position in (node.position for node in queue)
+                ):
+                    # Set current node as parent and add current node to queue
+                    queue.append(Node((new_row, new_column), current_node))
 
-                    self.bfs_path = path[::-1] # Reverse the list of nodes
-                    self.draw_path_all(path, self.canvas_bfs, COLOUR['path_bfs'])
-                    self.update_text()
-                    return path
-
-                # From current cell, traverse to all possible nodes (W, S, E, N)
-                for row_change, column_change in [(0, -1), (1, 0), (0, 1), (-1, 0)]:
-                    new_row = current_node.position[0] + row_change
-                    new_column = current_node.position[1] + column_change
-
-                    # Check if adjacent cell is a valid path (not a wall or out of range)
-                    if (
-                        (0 <= new_row < len(self.maze)) and (0 <= new_column < len(self.maze[0])) and
-                        (self.maze[new_row][new_column] != 1) and ((new_row, new_column) not in visited)
-                        ):
-                        # Set current node as parent and add current node to queue
-                        queue.append(Node((new_row, new_column), current_node))
-
-        self.bfs_path = 'FFS: no solution found'
+        self.bfs_path = 'BFS: no solution found'
         self.update_text()
 
 
@@ -208,8 +259,8 @@ class Application:
         Returns:
             list of tuples, list of positions to traverse from start to end
         '''
-        self.dfs_counter = 0
-        self.dfs_path = []
+        self.dfs_counter = 0 # Reset counter
+        self.dfs_path = [] # Reset path
         self.draw_maze(self.canvas_dfs)
         start_node = Node(self.start, None)
         stack = [start_node] # Use stack as data structure
@@ -221,10 +272,8 @@ class Application:
 
             # Update info in application window
             self.dfs_counter += 1
-            self.draw_path_circle(current_node, self.canvas_dfs, COLOUR['path_dfs'])
-            self.wait(ANIMATION_INTERVAL)
+            self.draw_path_circle(current_node, self.canvas_dfs, COLOUR['path_dfs'], self.dfs_counter)
             self.update_text()
-            # self.refresh_path_circle_dfs(current_node)
 
             visited.add(current_node.position)
 
@@ -235,7 +284,7 @@ class Application:
                     current_node = current_node.parent
 
                 self.dfs_path = path[::-1] # Reverse the list of nodes
-                self.draw_path_all(path, self.canvas_dfs, COLOUR['path_dfs'])
+                self.draw_path_all(self.dfs_path, self.canvas_dfs, COLOUR['path_dfs'])
                 self.update_text()
                 return path
 
@@ -244,15 +293,89 @@ class Application:
                 new_row = current_node.position[0] + row_change
                 new_column = current_node.position[1] + column_change
 
-                # Check if adjacent cell is a valid path (not a wall or out of range)
+                # Check if adjacent cell is a valid path
+                # Valid path must be in range of maze boundaries
+                # Valid path must not be a wall
                 if (
                     (0 <= new_row < len(self.maze)) and (0 <= new_column < len(self.maze[0])) and
                     (self.maze[new_row][new_column] != 1) and ((new_row, new_column) not in visited)
-                    ):
+                ):
                     # Set current node as parent and add current node to stack
                     stack.append(Node((new_row, new_column), current_node))
 
         self.dfs_path = 'DFS: no solution found'
+        self.update_text()
+
+
+    def start_astar(self):
+        '''
+        Function Name: start_dfs
+            Starts the A* search algorithm to traverse a maze
+        
+        Parameters:
+            Nothing
+        
+        Raises:
+            Nothing
+        
+        Returns:
+            list of tuples, list of positions to traverse from start to end
+        '''
+        # self.draw_maze(self.canvas_astar)
+        self.astar_counter = 0 # Reset counter
+        self.astar_path = [] # Reset path
+        self.draw_maze(self.canvas_astar)
+        start_node = Node(self.start, None, cost = 0)
+        cost = 0 # Initial cost for priority queue
+        pqueue = PriorityQueue() # Instantiate a priority queue
+        pqueue.put(start_node) # Store a tuple of cost and 'Node' (sort by cost when dequeue)
+        visited = set() # Create a set of visited nodes
+
+        while not pqueue.empty(): # Keep searching until priority queue is empty
+            
+            current_node = pqueue.get() # Takes out the node with least cost
+
+            #Update info in application window
+            self.astar_counter += 1
+            self.draw_path_circle(current_node, self.canvas_astar, COLOUR['path_astar'], self.astar_counter)
+            self.update_text()
+
+            visited.add(current_node.position)
+
+            if current_node.position == self.end:
+                path = [] # Find path by seeking through all parents node
+                while current_node is not None:
+                    path.append(current_node.position)
+                    current_node = current_node.parent
+
+                self.astar_path = path[::-1] # Reverse the list of nodes
+                self.draw_path_all(self.astar_path, self.canvas_astar, COLOUR['path_astar'])
+                self.update_text()
+                return path
+
+            # From current cell, find all possible nodes (W, S, E, N)  
+            for row_change, column_change in [(0, -1), (1, 0), (0, 1), (-1, 0)]:
+                new_row = current_node.position[0] + row_change
+                new_column = current_node.position[1] + column_change
+
+                # Check if adjacent cell is a valid path
+                # Valid path must be in range of maze boundaries
+                # Valid path must not be a wall
+                if (
+                    (0 <= new_row < len(self.maze)) and (0 <= new_column < len(self.maze[0])) and
+                    (self.maze[new_row][new_column] != 1) and ((new_row, new_column) not in visited)
+                    and all((new_row, new_column) != node.position for node in pqueue.queue)
+                ):
+
+                    # Calculate heuristic using Manthttan distance
+                    # abs(x - x_end) + abs(y - y_end)
+                    cost = abs(new_row - self.end[0]) + abs(new_column - self.end[1])
+
+                    # Set current node as parent and add current node to priority queue
+                    new_node = Node((new_row, new_column), current_node, cost)
+                    pqueue.put(new_node)
+
+        self.astar_path = 'A Star: no solution found'
         self.update_text()
 
     
@@ -275,10 +398,10 @@ class Application:
             for column in range(len(self.maze[0])):
                 if self.maze[row][column] == 1: # Cell is a wall
                     canvas.create_rectangle(
-                        column * CELL_SIZE,
-                        row * CELL_SIZE,
-                        column * CELL_SIZE + CELL_SIZE,
-                        row * CELL_SIZE + CELL_SIZE,
+                        column * CELL_SIZE, # pixels, horizontal distance to left edge
+                        row * CELL_SIZE, # pixels, vertical distance to upper edge
+                        column * CELL_SIZE + CELL_SIZE, # pixels, horizontal distance to right edge
+                        row * CELL_SIZE + CELL_SIZE, # pixels, vertical distance to lower edge
                         fill = COLOUR['wall']
                     )
                 else:
@@ -291,7 +414,7 @@ class Application:
                     )
 
 
-    def draw_path_circle(self, current_node, canvas, colour):
+    def draw_path_circle(self, current_node, canvas, colour, counter):
         '''
         Function Name: draw_path_circle
             Draws a small circle in an empty cell
@@ -308,13 +431,22 @@ class Application:
             None
         '''
         row, column = current_node.position
-        canvas.create_oval(
-                    column * CELL_SIZE + 0.25 * CELL_SIZE,
-                    row * CELL_SIZE + 0.25 * CELL_SIZE,
-                    column * CELL_SIZE + 0.75 *CELL_SIZE,
-                    row * CELL_SIZE + 0.75 *CELL_SIZE,
-                    fill = colour
-        )
+        for size in (0.20, 0.50, 0.70):
+            self.wait(ANIMATION_INTERVAL)
+            canvas.create_oval(
+                column * CELL_SIZE + (0.5 - size / 2) * CELL_SIZE,
+                row * CELL_SIZE + (0.5 - size / 2) * CELL_SIZE,
+                column * CELL_SIZE + (0.5 + size / 2) *CELL_SIZE,
+                row * CELL_SIZE + (0.5 + size / 2) *CELL_SIZE,
+                fill = colour
+            )
+            canvas.create_text(
+                column * CELL_SIZE + 0.5 * CELL_SIZE,
+                row * CELL_SIZE + 0.5 * CELL_SIZE,
+                text = counter,
+                fill = COLOUR['font'],
+                font = FONT['cell']
+            )
 
 
     def draw_path_all(self, path, canvas, colour):
@@ -335,33 +467,53 @@ class Application:
         '''
         # Plot solution path
         for row, column in path:
-            canvas.create_rectangle(
-            column * CELL_SIZE,
-            row * CELL_SIZE,
-            column * CELL_SIZE + CELL_SIZE,
-            row * CELL_SIZE + CELL_SIZE,
-            fill = colour
-        )
+            self.wait(ANIMATION_INTERVAL)
+            if (row, column) == path[0]:
+                for size in (1.00, 0.75):
+                    self.wait(ANIMATION_INTERVAL)
+                    canvas.create_rectangle(
+                        column * CELL_SIZE + (0.5 - size / 2) * CELL_SIZE,
+                        row * CELL_SIZE + (0.5 - size / 2) * CELL_SIZE,
+                        column * CELL_SIZE + (0.5 + size / 2) *CELL_SIZE,
+                        row * CELL_SIZE + (0.5 + size / 2) *CELL_SIZE,
+                        fill = COLOUR['start']
+                )
+                canvas.create_text(
+                    column * CELL_SIZE + 0.5 * CELL_SIZE,
+                    row * CELL_SIZE + 0.5 * CELL_SIZE,
+                    text = 'S',
+                    fill = COLOUR['font'],
+                    font = FONT['cell']
+                )
 
-        # Plot start coordinates
-        row, column = path[0]
-        canvas.create_rectangle(
-            column * CELL_SIZE,
-            row * CELL_SIZE,
-            column * CELL_SIZE + CELL_SIZE,
-            row * CELL_SIZE + CELL_SIZE,
-            fill = COLOUR['start']
-        )
-
-        # Plot start coordinates
-        row, column = path[-1]
-        canvas.create_rectangle(
-            column * CELL_SIZE,
-            row * CELL_SIZE,
-            column * CELL_SIZE + CELL_SIZE,
-            row * CELL_SIZE + CELL_SIZE,
-            fill = COLOUR['end']
-        )
+            elif (row, column) == path[-1]:
+                for size in (1.00, 0.75):
+                    self.wait(ANIMATION_INTERVAL)
+                    canvas.create_rectangle(
+                        column * CELL_SIZE + (0.5 - size / 2) * CELL_SIZE,
+                        row * CELL_SIZE + (0.5 - size / 2) * CELL_SIZE,
+                        column * CELL_SIZE + (0.5 + size / 2) *CELL_SIZE,
+                        row * CELL_SIZE + (0.5 + size / 2) *CELL_SIZE,
+                        fill = COLOUR['end']
+                )
+                canvas.create_text(
+                    column * CELL_SIZE + 0.5 * CELL_SIZE,
+                    row * CELL_SIZE + 0.5 * CELL_SIZE,
+                    text = 'E',
+                    fill = COLOUR['font'],
+                    font = FONT['cell']
+                )
+            
+            else:
+                for size in (1.00,):
+                    self.wait(ANIMATION_INTERVAL)
+                    canvas.create_rectangle(
+                        column * CELL_SIZE + (0.5 - size / 2) * CELL_SIZE,
+                        row * CELL_SIZE + (0.5 - size / 2) * CELL_SIZE,
+                        column * CELL_SIZE + (0.5 + size / 2) *CELL_SIZE,
+                        row * CELL_SIZE + (0.5 + size / 2) *CELL_SIZE,
+                        fill = colour
+                )
 
 
     def update_text(self):
@@ -391,6 +543,13 @@ class Application:
             f"Path:\t{str(self.dfs_path)[1 : -1]}\n"
         )
         self.label_dfs_results.config(text = text_dfs)
+
+        text_astar = (
+            f"Steps:\t{self.astar_counter}\n"
+            f"Length:\t{len(self.astar_path)}\n"
+            f"Path:\t{str(self.astar_path)[1 : -1]}\n"
+        )
+        self.label_astar_results.config(text = text_astar)
 
 
     def wait(self, time):
@@ -422,9 +581,9 @@ def main():
         [1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1],
         [1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1],
         [1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1],
-        [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1],
-        [1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1],
-        [1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1],
+        [1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1],
+        [1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1],
+        [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1],
         [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     ]
