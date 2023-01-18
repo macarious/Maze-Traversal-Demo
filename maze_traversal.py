@@ -29,7 +29,7 @@ COLOUR = {
     'end' : 'red1',
     'path_bfs' : 'yellow1',
     'path_dfs' : 'purple1',
-    'path_astar' : 'orange1',
+    'path_astar' : 'cyan',
     'font' : 'black',
 }  
 
@@ -43,7 +43,7 @@ class Node:
         Parameters:
             position -- tuple, current coordinates
             parent -- Node, parent of current node
-            g -- numeral, distance from start to new node, used in A*
+            g -- numeral,cost from start to new node, used in A*
             h -- numeral, heuristc, used in A*
 
         Returns:
@@ -156,11 +156,11 @@ class Application:
         self.draw_maze(self.canvas_astar)
 
         # Create buttons
-        self.button_bfs = ttk.Button(self.master, text = 'Start BFS', command = self.start_bfs)
+        self.button_bfs = ttk.Button(self.master, text = 'Start BFS', command = self.start_bfs, state = 'normal')
         self.button_bfs.grid(column = 0, row = 2, sticky = 'nsew', padx = 70, pady = 0)
-        self.button_dfs = ttk.Button(self.master, text = 'Start DFS', command = self.start_dfs)
+        self.button_dfs = ttk.Button(self.master, text = 'Start DFS', command = self.start_dfs, state = 'normal')
         self.button_dfs.grid(column = 1, row = 2, sticky = 'nsew', padx = 70, pady = 0)
-        self.button_astar = ttk.Button(self.master, text = 'Start A*', command = self.start_astar)
+        self.button_astar = ttk.Button(self.master, text = 'Start A*', command = self.start_astar, state = 'normal')
         self.button_astar.grid(column = 2, row = 2, sticky = 'nsew', padx = 70, pady = 0)
 
         # Create labels for displaing results
@@ -179,7 +179,6 @@ class Application:
         self.label_astar_results = ttk.Label(self.frame_astar_results, anchor = 'nw', text = '', font = FONT['info box'], wraplength = len(self.maze[0]) * CELL_SIZE - 50)
         self.label_astar_results.pack(expand = True, fill = 'both', padx = 20, pady = 5)
 
-
         self.update_text()
 
 
@@ -197,10 +196,11 @@ class Application:
         Returns:
             list of tuples, list of positions to traverse from start to end
         '''
+        self.disable_buttons()
         self.bfs_counter = 0 # Reset counter
         self.bfs_path = [] # Reset path
         self.draw_maze(self.canvas_bfs)
-        start_node = Node(self.start, None)
+        start_node = Node(position = self.start, parent = None)
         queue = [start_node] # Use queue as data structure
         visited = set() # Create a set of visited nodes
 
@@ -241,7 +241,7 @@ class Application:
                     ) and all((new_row, new_column) != position for position in (node.position for node in queue)
                 ):
                     # Set current node as parent and add current node to queue
-                    queue.append(Node((new_row, new_column), current_node))
+                    queue.append(Node(position = (new_row, new_column), parent = current_node))
 
         self.bfs_path = 'BFS: no solution found'
         self.update_text()
@@ -261,10 +261,11 @@ class Application:
         Returns:
             list of tuples, list of positions to traverse from start to end
         '''
+        self.disable_buttons()
         self.dfs_counter = 0 # Reset counter
         self.dfs_path = [] # Reset path
         self.draw_maze(self.canvas_dfs)
-        start_node = Node(self.start, None)
+        start_node = Node(position = self.start, parent = None)
         stack = [start_node] # Use stack as data structure
         visited = set() # Create a set of visited nodes
 
@@ -303,7 +304,7 @@ class Application:
                     (self.maze[new_row][new_column] != 1) and ((new_row, new_column) not in visited)
                 ):
                     # Set current node as parent and add current node to stack
-                    stack.append(Node((new_row, new_column), current_node))
+                    stack.append(Node(position = (new_row, new_column), parent = current_node))
 
         self.dfs_path = 'DFS: no solution found'
         self.update_text()
@@ -323,6 +324,7 @@ class Application:
         Returns:
             list of tuples, list of positions to traverse from start to end
         '''
+        self.disable_buttons()
         # self.draw_maze(self.canvas_astar)
         self.astar_counter = 0 # Reset counter
         self.astar_path = [] # Reset path
@@ -371,11 +373,11 @@ class Application:
                     # Distance from new cell to end cell:
                     # Calculate heuristic using Manthttan distance
                     #   h = abs(x - x_end) + abs(y - y_end)
-                    h = abs(new_row - self.end[0]) + abs(new_column - self.end[1])
-                    g = current_node.g + 1 # Update distance from current cell to new cell
+                    new_h = abs(new_row - self.end[0]) + abs(new_column - self.end[1])
+                    new_g = current_node.g + 1 # Update cost from current cell to new cell
 
                     # Set current node as parent and add current node to priority queue
-                    new_node = Node((new_row, new_column), current_node, g, h)
+                    new_node = Node(position = (new_row, new_column), parent = current_node, g = new_g, h = new_h)
                     pqueue.put(new_node)
 
         self.astar_path = 'A Star: no solution found'
@@ -517,6 +519,7 @@ class Application:
                         row * CELL_SIZE + (0.5 + size / 2) *CELL_SIZE,
                         fill = colour
                 )
+        self.enable_buttons()
 
 
     def update_text(self):
@@ -553,6 +556,18 @@ class Application:
             f"Path:\t{str(self.astar_path)[1 : -1]}\n"
         )
         self.label_astar_results.config(text = text_astar)
+
+
+    def disable_buttons(self):
+        self.button_bfs['state'] = 'disabled'
+        self.button_dfs['state'] = 'disabled'
+        self.button_astar['state'] = 'disabled'
+
+
+    def enable_buttons(self):
+        self.button_bfs['state'] = 'normal'
+        self.button_dfs['state'] = 'normal'
+        self.button_astar['state'] = 'normal'
 
 
     def wait(self, time):
