@@ -10,7 +10,7 @@ __DFS (Depth-First Search)__ is a method for exploring a graph or tree in a dept
 
 __A* (A-star)__ is a more sophisticated algorithm that uses heuristic information to guide the search. It is commonly used to find the shortest path in a graph or tree. In the context of maze traversal, A* can be used to find the shortest path from the start point to the end point. The algorithm uses a combination of the actual cost to reach the current node (the "g" value) and an estimated cost to reach the end point (the "h" value) to evaluate the best path to take. The Manhattan distance, which measures the distance between two points in a grid-like pattern, is used as the heuristic for the "h" value in A* when traversing mazes in the program. The algorithm starts at the starting point and explores the neighbouring cells with the lowest combined cost until it reaches the end point.
 
-![Progarm Overview](https://github.com/macarious/https://github.com/macarious/Maze-Traversal-Demo/blob/main/screenshots/04-all-traversal.png "Program Overview")
+![Progarm Overview](https://github.com/macarious/Maze-Traversal-Demo/blob/main/screenshots/04-all-traversal.png "Program Overview")
 <br>
 
 ## 2. Technologies
