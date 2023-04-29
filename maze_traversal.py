@@ -2,12 +2,11 @@
 '''
 CS 5002 - Final Project
 
-Maze Traversal using BFS and DFS
+Maze Traversal using BFS, DFS, and A-star.
 
-GILL, JagJeevin
+This is a visual demonstration of how various algorithms are used to create an AI agent to traverse a maze.
+
 HUI, Macarious Kin Fung
-PAN, Yuchen
-WANG, Judy
 '''
 
 from queue import PriorityQueue
